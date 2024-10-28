@@ -5,13 +5,11 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 
-players_list = list(range(0,4))
+players_list = list(range(0,30))
 new_game = models.Game(players_list)
 
 print(new_game.players)
 
 current_targeting = targeting.TargetingGraph()
 current_targeting.generate_graph(new_game.players)
-print(list(current_targeting.find_all_neighbors(0)))
-print(list(current_targeting.find_successors(0)))
-print(list(current_targeting.find_predecessors(0)))
+print(len(list(current_targeting.find_all_edges())))
