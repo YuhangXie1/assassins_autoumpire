@@ -4,55 +4,44 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import sys
 
-seed = 6985696973381347607
-# seed = random.randrange(sys.maxsize)
+#seed = 6985696973381347607
+seed = random.randrange(sys.maxsize)
 random.seed(seed)
 
 class TargetingGraph:
     """
-    Graph of which players are targeting who
+    Object containing a regular 3-degree directed graph (3 in-degrees, 3 out-degrees per node)
     """
     def __init__(self) -> None:
-        self.players = []
         self.target_graph = nx.DiGraph()
-        self.targets = 3
 
     def generate_graph(self, player_list):
+
+        #add nodes to graph
         self.target_graph.add_nodes_from(player_list)
 
-        non_saturated_nodes = player_list.copy()
+        #list of all possible edges, and randomised
+        possible_edges = [(u,v) for u in self.target_graph for v in self.target_graph if u != v]
+        random.shuffle(possible_edges)
 
-        #round 1
-        self.target_graph.add_edges_from(list(self.build_edge(non_saturated_nodes).edges))
-        #round 2
-        self.target_graph.add_edges_from(list(self.build_edge(non_saturated_nodes).edges))
-        #round 3
-        self.target_graph.add_edges_from(list(self.build_edge(non_saturated_nodes).edges))
+        #tracking number of in and out degrees for each node
+        out_degrees = {node: 0 for node in self.target_graph.nodes}
+        in_degrees = {node: 0 for node in self.target_graph.nodes}
 
+        #checks each edge and see if they are valid additions
+        for u, v in possible_edges:
+            if (v,u) not in self.target_graph.edges and out_degrees[u] < 3 and in_degrees[v] <3:
+                self.target_graph.add_edge(u,v)
+                #print(f"added edge ({u},{v})")
+                out_degrees[u] += 1
+                in_degrees[v] += 1
+                
+            if all(deg == 3 for deg in out_degrees.values()) and all(deg == 3 for deg in in_degrees.values()):
+                break
+
+        self.check_graph()
         nx.draw(self.target_graph, with_labels = True)
         plt.savefig("target_graph.png")
-
-    def build_edge(self, player_list):
-        working_graph = self.target_graph.copy()
-        #print(len(list(working_graph.edges())))
-  
-        for player in player_list:
-            working_node_list = player_list.copy()
-            working_node_list.remove(player) #so cannot form an edge to itself
-            for node in player_list:
-                if node in working_node_list:
-                    if len(list(working_graph.predecessors(node))) >= self.targets: #removes all nodes already got 3 players targeting it
-                        working_node_list.remove(node)
-                    elif player in list(working_graph.successors(node)):
-                        working_node_list.remove(node)
-                
-            if len(working_node_list) != 0:
-                target = random.choice(working_node_list)
-                working_graph.add_edge(player, target)
-            else:
-                print(f"No available valid targets for node {player}")
-
-        return(working_graph)
 
     def find_all_neighbors(self, node):
         return nx.all_neighbors(self.target_graph, node)
@@ -66,23 +55,37 @@ class TargetingGraph:
     def find_all_edges(self):
         return self.target_graph.edges()
     
-    def check_num_targets_all(self):
+    def check_graph(self):
         """
-        Checks if all nodes have the right number of predecessors and successors
+        Checks if all nodes satisfy the following conditions:
+        1) Does not target itself
+        2) Does not target another node targeting it (bidirectional)
+        3) Has exactly 3 in-degrees (predecessors) and 3 out-degrees (successors)
         """
+
         print("Seed was:", seed)
-        count = 0
+        err_count = 0
+
+        
+        for (u,v) in self.target_graph.edges:
+            if u == v: #No self targeting
+                print(f"Connection error: edge ({u},{v}) targets itself")
+                err_count += 1
+            elif (v,u) in self.target_graph.edges: #no bidirectional edge
+                print(f"Connection error: edge ({u},{v}) is bidirectional")
+                err_count += 1
+
         for node in self.target_graph.nodes():
             if len(list(self.find_successors(node))) == 3 and len(list(self.find_predecessors(node))) == 3:
                 print(f"node {node} - correct")
             else:
                 print(f"node {node} - incorrect: successors = {len(list(self.find_successors(node)))}, predecessors = {len(list(self.find_predecessors(node)))}")
-                count += 1
+                err_count += 1
         
-        if count == 0:
-            return True 
+        if err_count == 0:
+            return True
         else:
-            print(count)
+            print(f"Error count: {err_count}")
             return False
 
 

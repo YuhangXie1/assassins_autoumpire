@@ -6,12 +6,10 @@ import matplotlib.pyplot as plt
 
 
 players_list = list(range(0,30))
-new_game = models.Game(players_list)
 
 current_targeting = targeting.TargetingGraph()
-current_targeting.generate_graph(new_game.players)
+current_targeting.generate_graph(players_list)
 print(len(list(current_targeting.find_all_edges())))
-current_targeting.check_num_targets_all()
 
 
 def find_solution_graph(node_list):
