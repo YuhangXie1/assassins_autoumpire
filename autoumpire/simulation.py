@@ -9,17 +9,29 @@ class SimGame:
         self.target_graph_array = [targeting.TargetingGraph(self.initial_graph_size)]
         self.lifetime = 0
 
-    def run(self):
+    def run(self, tries):
         initial_graph = self.target_graph_array[0]
-        initial_graph.generate_graph()
+        initial_seed = initial_graph.generate_solved_initial_graph(10)
 
-        working_graph = initial_graph.target_graph.copy()
-        self.remove_random_node(working_graph)
-             
+        lifetime_dict = {}
+
+        for x in range(tries):
+            working_graph = targeting.TargetingGraph(self.initial_graph_size)
+            working_graph.target_graph = initial_graph.target_graph.copy()
+            lifetime = self.remove_random_node(working_graph)
+            try:
+                lifetime_dict[lifetime] += 1
+            except KeyError:
+                lifetime_dict[lifetime] = 1
+
+        return lifetime_dict
+            
     def remove_random_node(self, graph):
-        if graph.target_graph.remove_node(random.choice(list(graph.target_graph.nodes()))):
+        node_to_remove = random.choice(list(graph.target_graph.nodes))
+        if graph.remove_one_node(node_to_remove):
             self.lifetime += 1
-            self.remove_random_node(self,graph)
+            print(f"successfully removed node {node_to_remove}")
+            self.remove_random_node(graph)
         else:
             print(f"Simulation end, lifetime = {self.lifetime}")
             return self.lifetime

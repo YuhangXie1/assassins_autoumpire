@@ -12,20 +12,24 @@ class TargetingGraph:
     """
     Object containing a regular 3-degree directed graph (3 in-degrees, 3 out-degrees per node)
     """
-    def __init__(self, initial_graph_size) -> None:
+    def __init__(self, initial_graph_size, seed = None) -> None:
         self.target_graph = nx.DiGraph()
         self.initial_graph_size = initial_graph_size
-        self.seed = 0
-        self.set_seed = None
-        #self.set_seed = 947908605424835523
+        self.set_seed = False
+        self.seed = None
+        if seed != None:
+            self.seed = seed
+            self.set_seed = True
+            
 
     def generate_solved_initial_graph(self, tries:int):
+        print("Generating new solved initial graph")
         for x in range(int(tries)):
             if self.generate_initial_graph():
-                print(f"Number of tries: {x+1}")
-                break
-        
-        print(f"Number of tries at maximum {x+1}")
+                print(f"Number of tries: {x+1}. Successful seed: {self.seed}")
+                return self.seed
+
+        raise RuntimeError(f"No valid graph found after {x+1} tries")
 
     def generate_initial_graph(self):
         """
@@ -37,10 +41,8 @@ class TargetingGraph:
         Returns:
         """
         #randomises seed
-        if self.set_seed is None:
+        if not self.set_seed:
             self.seed = random.randrange(sys.maxsize)
-        else:
-            self.seed = self.set_seed
         random.seed(self.seed)
 
         #add nodes to graph
@@ -49,10 +51,8 @@ class TargetingGraph:
 
         #list of all possible edges, and randomised
         possible_edges = [(u,v) for u in self.target_graph for v in self.target_graph if u != v]
-        self.build_edges(possible_edges)
-        self.visualise_graph()
 
-        return self.check_graph()
+        return self.build_edges(possible_edges)
 
     def build_edges(self, possible_edges):
         """
@@ -65,7 +65,6 @@ class TargetingGraph:
         if len(possible_edges) == 0:
             raise RuntimeError("Possible edges list is empty")
         
-        #randomises the edges
         random.shuffle(possible_edges)
 
         #tracking number of in and out degrees for each node
@@ -81,9 +80,9 @@ class TargetingGraph:
             
             #exits loop if all nodes have the correct degrees
             if all(deg == 3 for deg in out_degrees.values()) and all(deg == 3 for deg in in_degrees.values()):
-                return self.check_graph()
+                return self.check_graph("build_edges - success")
         
-        return self.check_graph()
+        return self.check_graph("build_edges - failure")
 
     def find_all_neighbors(self, node):
         return nx.all_neighbors(self.target_graph, node)
@@ -97,13 +96,14 @@ class TargetingGraph:
     def find_all_edges(self):
         return self.target_graph.edges()
     
-    def check_graph(self):
+    def check_graph(self, caller = None):
         """
         Checks if all nodes satisfy the following conditions:
         1) Does not target itself
         2) Does not target another node targeting it (bidirectional)
         3) Has exactly 3 in-degrees (predecessors) and 3 out-degrees (successors)
         """
+        print(f"Checking graph after {caller}")
         err_count = 0
 
         for (u,v) in self.target_graph.edges:
@@ -122,21 +122,21 @@ class TargetingGraph:
                 err_count += 1
 
         if err_count == 0:
-            print("Seed was:", self.seed)
+            print(f"Successful seed was: {self.seed}")
             return True
         else:
             print(f"Error count: {err_count}")
             return False
 
-    def remove_node(self, node):
+    def remove_one_node(self, node):
+        print(f"removing node {node}")
         successors = list(self.find_successors(node))
         predecessors = list(self.find_predecessors(node))
         self.target_graph.remove_node(node)
 
         possible_edges = [(u,v) for u in predecessors for v in successors if u != v]
-        self.build_edges(possible_edges)
-
-        return self.check_graph()
+        
+        return self.build_edges(possible_edges)
         #nx.draw(self.target_graph, with_labels = True)
         #plt.savefig(f"target_graph_remove_{node}.png")
 
