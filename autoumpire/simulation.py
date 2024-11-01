@@ -16,13 +16,14 @@ class SimGame:
         lifetime_dict = {}
 
         for x in range(tries):
+            self.lifetime = 0
             working_graph = targeting.TargetingGraph(self.initial_graph_size)
             working_graph.target_graph = initial_graph.target_graph.copy()
-            lifetime = self.remove_random_node(working_graph)
+            self.remove_random_node(working_graph)
             try:
-                lifetime_dict[lifetime] += 1
+                lifetime_dict[self.lifetime] += 1
             except KeyError:
-                lifetime_dict[lifetime] = 1
+                lifetime_dict[self.lifetime] = 1
 
         return lifetime_dict
             
@@ -36,7 +37,8 @@ class SimGame:
             print(f"Simulation end, lifetime = {self.lifetime}")
             return self.lifetime
 
-
+    def plot_lifetime(self, lifetime_dict):
+        pass
 
 
 
