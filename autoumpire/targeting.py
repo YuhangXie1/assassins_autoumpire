@@ -5,9 +5,6 @@ import matplotlib.pyplot as plt
 import sys
 import pydot
 
-#seed = 2470123492846919139
-
-
 class TargetingGraph:
     """
     Object containing a regular 3-degree directed graph (3 in-degrees, 3 out-degrees per node)
@@ -27,6 +24,8 @@ class TargetingGraph:
         for x in range(int(tries)):
             if self.generate_initial_graph():
                 print(f"Number of tries: {x+1}. Successful seed: {self.seed}")
+                self.cycle_analysis()
+                self.visualise_graph()
                 return self.seed
 
         raise RuntimeError(f"No valid graph found after {x+1} tries")
@@ -52,9 +51,9 @@ class TargetingGraph:
         #list of all possible edges, and randomised
         possible_edges = [(u,v) for u in self.target_graph for v in self.target_graph if u != v]
 
-        return self.build_edges(possible_edges)
+        return self.build_edges(possible_edges, prevent_3_cycles = True)
 
-    def build_edges(self, possible_edges):
+    def build_edges(self, possible_edges, prevent_3_cycles = False):
         """
         Iteratively builds the edges between nodes
 
@@ -71,9 +70,16 @@ class TargetingGraph:
         out_degrees = {node: len(list(self.find_successors(node))) for node in self.target_graph.nodes}
         in_degrees = {node: len(list(self.find_predecessors(node))) for node in self.target_graph.nodes}
 
+
+        def _check_validity(u, v, prevent_3_cycles = False):
+            conditions = [(v,u) not in self.target_graph.edges, out_degrees[u] < 3, in_degrees[v] < 3]
+            if prevent_3_cycles:
+                conditions.append(self.check_if_cycle_3(u,v) is None)
+            return conditions
+
         #checking edges are valid before adding them
         for u, v in possible_edges:
-            if (v,u) not in self.target_graph.edges and out_degrees[u] < 3 and in_degrees[v] < 3 and self.check_if_cycle_3(u,v) is None:
+            if all(_check_validity(u,v,prevent_3_cycles)): 
                 self.target_graph.add_edge(u,v)
                 out_degrees[u] += 1
                 in_degrees[v] += 1
@@ -137,12 +143,10 @@ class TargetingGraph:
         possible_edges = [(u,v) for u in predecessors for v in successors if u != v]
         
         return self.build_edges(possible_edges)
-        #nx.draw(self.target_graph, with_labels = True)
-        #plt.savefig(f"target_graph_remove_{node}.png")
-
 
     def cycle_analysis(self):
         cycles = nx.simple_cycles(self.target_graph, 3)
+        print(list(cycles))
         return cycles
 
     def check_if_cycle_3(self, u, v):
